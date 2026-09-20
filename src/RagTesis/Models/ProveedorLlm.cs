@@ -1,0 +1,1 @@
+public enum ProveedorLlm { Gemini, Nvidia }
