@@ -30,22 +30,34 @@
         <div>
             <span class="field-label">Proveedor</span>
             <div class="segmented">
-                <label class="@ClaseSegmentoProveedor(ProveedorLlm.Gemini)">
-                    <input type="radio" name="proveedor" checked="@(Proveedor == ProveedorLlm.Gemini)"
-                           @onchange="@(() => Proveedor = ProveedorLlm.Gemini)" disabled="@_consultando" />
+                <label class="@ClaseSegmentoBase("gemini")">
+                    <input type="radio" name="proveedor-base" checked="@(ProveedorBase == "gemini")"
+                           @onchange="@(() => ProveedorBase = "gemini")" disabled="@_consultando" />
                     Gemini
                 </label>
-                <label class="@ClaseSegmentoProveedor(ProveedorLlm.GeminiFlashLite)">
-                    <input type="radio" name="proveedor" checked="@(Proveedor == ProveedorLlm.GeminiFlashLite)"
-                           @onchange="@(() => Proveedor = ProveedorLlm.GeminiFlashLite)" disabled="@_consultando" />
-                    Gemini Flash Lite
-                </label>
-                <label class="@ClaseSegmentoProveedor(ProveedorLlm.Nvidia)">
-                    <input type="radio" name="proveedor" checked="@(Proveedor == ProveedorLlm.Nvidia)"
-                           @onchange="@(() => Proveedor = ProveedorLlm.Nvidia)" disabled="@_consultando" />
+                <label class="@ClaseSegmentoBase("nvidia")">
+                    <input type="radio" name="proveedor-base" checked="@(ProveedorBase == "nvidia")"
+                           @onchange="@(() => ProveedorBase = "nvidia")" disabled="@_consultando" />
                     NVIDIA
                 </label>
             </div>
+
+            @if (ProveedorBase == "gemini")
+            {
+                <div class="segmented" style="margin-top: 0.5rem;">
+                    <label class="@ClaseSegmentoModelo(ProveedorLlm.Gemini)">
+                        <input type="radio" name="modelo-gemini" checked="@(ModeloGemini == ProveedorLlm.Gemini)"
+                               @onchange="@(() => ModeloGemini = ProveedorLlm.Gemini)" disabled="@_consultando" />
+                        Flash
+                    </label>
+                    <label class="@ClaseSegmentoModelo(ProveedorLlm.GeminiFlashLite)">
+                        <input type="radio" name="modelo-gemini" checked="@(ModeloGemini == ProveedorLlm.GeminiFlashLite)"
+                               @onchange="@(() => ModeloGemini = ProveedorLlm.GeminiFlashLite)" disabled="@_consultando" />
+                        Flash Lite
+                    </label>
+                </div>
+            }
+
             <p class="field-hint">
                 El embedding de la pregunta siempre usa Gemini. NVIDIA (Nemotron) es un modelo
                 bastante más grande y lento para generar la respuesta.
@@ -113,7 +125,9 @@
 @code {
     private string Coleccion { get; set; } = "tesis";
     private string Pregunta { get; set; } = "";
-    private ProveedorLlm Proveedor { get; set; } = ProveedorLlm.Gemini;
+    private string ProveedorBase { get; set; } = "gemini";
+    private ProveedorLlm ModeloGemini { get; set; } = ProveedorLlm.Gemini;
+    private ProveedorLlm Proveedor => ProveedorBase == "nvidia" ? ProveedorLlm.Nvidia : ModeloGemini;
 
     private bool _consultando;
     private bool _error;
@@ -129,9 +143,16 @@
         return clases;
     }
 
-    private string ClaseSegmentoProveedor(ProveedorLlm valor)
+    private string ClaseSegmentoBase(string valor)
     {
-        var clases = valor == Proveedor ? "selected" : "";
+        var clases = valor == ProveedorBase ? "selected" : "";
+        if (_consultando) clases += " disabled";
+        return clases;
+    }
+
+    private string ClaseSegmentoModelo(ProveedorLlm valor)
+    {
+        var clases = valor == ModeloGemini ? "selected" : "";
         if (_consultando) clases += " disabled";
         return clases;
     }
