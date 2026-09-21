@@ -1,0 +1,121 @@
+@page "/subir"
+@using RagTesis.Embeddings
+@inject IConfiguration Configuracion
+
+<PageTitle>Subir documento</PageTitle>
+
+<h1>Subir documento</h1>
+
+<div>
+    <label>
+        <input type="radio" name="tipo" checked="@(TipoDocumento == "tesis")"
+               @onchange="@(() => TipoDocumento = "tesis")" disabled="@_procesando" />
+        Mi tesis
+    </label>
+    <label style="margin-left: 1rem;">
+        <input type="radio" name="tipo" checked="@(TipoDocumento == "corpus")"
+               @onchange="@(() => TipoDocumento = "corpus")" disabled="@_procesando" />
+        Libro del corpus
+    </label>
+</div>
+
+@if (TipoDocumento == "corpus")
+{
+    <div style="margin-top: 0.5rem;">
+        <label for="nombreLibro">Nombre del libro</label>
+        <br />
+        <input id="nombreLibro" @bind="NombreLibro" disabled="@_procesando" />
+    </div>
+}
+
+<div style="margin-top: 1rem;">
+    <InputFile OnChange="OnArchivoSeleccionadoAsync" accept=".md" disabled="@_procesando" />
+</div>
+
+@if (!string.IsNullOrEmpty(_nombreArchivo))
+{
+    <p>Archivo cargado: @($"{_nombreArchivo}.md") (@_contenidoMarkdown?.Length caracteres)</p>
+}
+
+<button @onclick="ProcesarAsync" disabled="@(_procesando || _contenidoMarkdown is null)" style="margin-top: 1rem;">
+    @(_procesando ? "Procesando (puede tardar varios minutos)..." : "Procesar y guardar")
+</button>
+
+@if (!string.IsNullOrEmpty(_mensaje))
+{
+    <p style="margin-top: 1rem;">@_mensaje</p>
+}
+
+@code {
+    private string TipoDocumento { get; set; } = "tesis";
+    private string NombreLibro { get; set; } = "";
+
+    private string? _contenidoMarkdown;
+    private string? _nombreArchivo;
+    private bool _procesando;
+    private string? _mensaje;
+
+    private async Task OnArchivoSeleccionadoAsync(InputFileChangeEventArgs e)
+    {
+        var archivo = e.File;
+
+        if (!archivo.Name.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+        {
+            _mensaje = "Solo se aceptan archivos .md.";
+            _contenidoMarkdown = null;
+            _nombreArchivo = null;
+            return;
+        }
+
+        using var stream = archivo.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024);
+        using var lector = new StreamReader(stream);
+        _contenidoMarkdown = await lector.ReadToEndAsync();
+        _nombreArchivo = Path.GetFileNameWithoutExtension(archivo.Name);
+        _mensaje = null;
+    }
+
+    private async Task ProcesarAsync()
+    {
+        if (_contenidoMarkdown is null || _nombreArchivo is null)
+            return;
+
+        if (TipoDocumento == "corpus" && string.IsNullOrWhiteSpace(NombreLibro))
+        {
+            _mensaje = "Falta el nombre del libro.";
+            return;
+        }
+
+        _procesando = true;
+        _mensaje = null;
+        StateHasChanged();
+
+        try
+        {
+            var nombreColeccion = TipoDocumento == "tesis" ? "mi-tesis" : "corpus-libros";
+            var nombreDocumento = TipoDocumento == "tesis" ? _nombreArchivo : NombreLibro;
+
+            var chunks = await MarkdownChunker.ChunkearMarkdownDesdeTextoAsync(_contenidoMarkdown, nombreDocumento);
+            chunks = chunks.Where(c => !string.IsNullOrWhiteSpace(c.Seccion)).ToList();
+
+            var apiKey = Configuracion["GoogleApiKey"]
+                ?? throw new InvalidOperationException("Falta configurar GoogleApiKey con dotnet user-secrets.");
+
+            var embeddingService = new EmbeddingService(apiKey);
+            var vectorStoreSetup = new VectorStoreSetup(nombreColeccion);
+            await vectorStoreSetup.InicializarAsync();
+
+            var chunksConEmbeddings = await embeddingService.GenerarEmbeddingsAsync(chunks);
+            await vectorStoreSetup.GuardarChunksAsync(chunksConEmbeddings);
+
+            _mensaje = $"Listo: {chunksConEmbeddings.Count} chunks guardados en la colección \"{nombreColeccion}\".";
+        }
+        catch (Exception ex)
+        {
+            _mensaje = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _procesando = false;
+        }
+    }
+}
