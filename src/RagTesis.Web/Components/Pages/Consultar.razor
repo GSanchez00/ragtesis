@@ -1,0 +1,150 @@
+@page "/consultar"
+@using RagTesis.Embeddings
+@inject IConfiguration Configuracion
+
+<PageTitle>Consultar</PageTitle>
+
+<div class="page-container">
+    <div class="page-header">
+        <h1>Consultar</h1>
+        <p>Preguntale en lenguaje natural a un documento ya guardado en Qdrant.</p>
+    </div>
+
+    <div class="card stack">
+        <div>
+            <span class="field-label">Colección</span>
+            <div class="segmented">
+                <label class="@ClaseSegmento("tesis")">
+                    <input type="radio" name="coleccion" checked="@(Coleccion == "tesis")"
+                           @onchange="@(() => Coleccion = "tesis")" disabled="@_consultando" />
+                    Mi tesis
+                </label>
+                <label class="@ClaseSegmento("corpus")">
+                    <input type="radio" name="coleccion" checked="@(Coleccion == "corpus")"
+                           @onchange="@(() => Coleccion = "corpus")" disabled="@_consultando" />
+                    Corpus de libros
+                </label>
+            </div>
+        </div>
+
+        <div>
+            <label class="field-label" for="pregunta">Pregunta</label>
+            <textarea id="pregunta" class="text-input" placeholder="ej. ¿Por qué Pedro dudaba en comer con gentiles?"
+                      @bind="Pregunta" disabled="@_consultando"></textarea>
+        </div>
+
+        <div>
+            <button class="btn btn-primary" @onclick="ConsultarAsync" disabled="@(_consultando || string.IsNullOrWhiteSpace(Pregunta))">
+                @if (_consultando)
+                {
+                    <span class="spinner"></span>
+                    <span>Buscando y generando respuesta...</span>
+                }
+                else
+                {
+                    <span>Preguntar</span>
+                }
+            </button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(_mensaje))
+        {
+            <div class="alert @(_error ? "alert-error" : "alert-info")">@_mensaje</div>
+        }
+    </div>
+
+    @if (!string.IsNullOrEmpty(_respuesta))
+    {
+        <div class="card">
+            <span class="field-label">Respuesta</span>
+            <div class="respuesta">@_respuesta</div>
+        </div>
+    }
+
+    @if (_fragmentos.Count > 0)
+    {
+        <div class="card">
+            <details class="fragmentos" open>
+                <summary>@_fragmentos.Count fragmentos recuperados</summary>
+                @foreach (var (chunk, score) in _fragmentos)
+                {
+                    <div class="fragmento">
+                        <div class="fragmento-header">
+                            <span class="fragmento-seccion">@chunk.Seccion</span>
+                            <span class="badge">score @score.ToString("F4")</span>
+                        </div>
+                        <div class="fragmento-texto">@Truncar(chunk.Texto, 240)</div>
+                    </div>
+                }
+            </details>
+        </div>
+    }
+</div>
+
+@code {
+    private string Coleccion { get; set; } = "tesis";
+    private string Pregunta { get; set; } = "";
+
+    private bool _consultando;
+    private bool _error;
+    private string? _mensaje;
+    private string? _respuesta;
+    private List<(ChunkVectorRecord Chunk, double Score)> _fragmentos = new();
+
+    private string ClaseSegmento(string valor)
+    {
+        var clases = valor == Coleccion ? "selected" : "";
+        if (_consultando) clases += " disabled";
+        return clases;
+    }
+
+    private static string Truncar(string texto, int maxCaracteres) =>
+        texto.Length <= maxCaracteres ? texto : texto[..maxCaracteres] + "...";
+
+    private async Task ConsultarAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Pregunta))
+            return;
+
+        _consultando = true;
+        _mensaje = null;
+        _respuesta = null;
+        _fragmentos = new();
+        StateHasChanged();
+
+        try
+        {
+            var nombreColeccion = Coleccion == "tesis" ? "mi-tesis" : "corpus-libros";
+
+            var apiKey = Configuracion["GoogleApiKey"]
+                ?? throw new InvalidOperationException("Falta configurar GoogleApiKey con dotnet user-secrets.");
+
+            var embeddingService = new EmbeddingService(apiKey);
+            var vectorStoreSetup = new VectorStoreSetup(nombreColeccion);
+            await vectorStoreSetup.InicializarAsync();
+
+            var vectorPregunta = await embeddingService.GenerarEmbeddingAsync(Pregunta);
+            _fragmentos = await vectorStoreSetup.BuscarAsync(vectorPregunta, top: 5);
+
+            if (_fragmentos.Count == 0)
+            {
+                _mensaje = $"No hay chunks guardados en \"{nombreColeccion}\" todavía.";
+                _error = true;
+                return;
+            }
+
+            var chatClient = ChatClientFactory.Crear(ProveedorLlm.Gemini, apiKey);
+            var consultaService = new ConsultaTesisService(chatClient);
+            _respuesta = await consultaService.ResponderPreguntaAsync(Pregunta, _fragmentos);
+        }
+        catch (Exception ex)
+        {
+            _mensaje = $"Error: {ex.Message}";
+            _error = true;
+        }
+        finally
+        {
+            _consultando = false;
+        }
+    }
+}

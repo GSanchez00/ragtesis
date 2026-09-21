@@ -4,47 +4,75 @@
 
 <PageTitle>Subir documento</PageTitle>
 
-<h1>Subir documento</h1>
-
-<div>
-    <label>
-        <input type="radio" name="tipo" checked="@(TipoDocumento == "tesis")"
-               @onchange="@(() => TipoDocumento = "tesis")" disabled="@_procesando" />
-        Mi tesis
-    </label>
-    <label style="margin-left: 1rem;">
-        <input type="radio" name="tipo" checked="@(TipoDocumento == "corpus")"
-               @onchange="@(() => TipoDocumento = "corpus")" disabled="@_procesando" />
-        Libro del corpus
-    </label>
-</div>
-
-@if (TipoDocumento == "corpus")
-{
-    <div style="margin-top: 0.5rem;">
-        <label for="nombreLibro">Nombre del libro</label>
-        <br />
-        <input id="nombreLibro" @bind="NombreLibro" disabled="@_procesando" />
+<div class="page-container">
+    <div class="page-header">
+        <h1>Subir documento</h1>
+        <p>Troceá, generá embeddings y guardá un documento en Qdrant.</p>
     </div>
-}
 
-<div style="margin-top: 1rem;">
-    <InputFile OnChange="OnArchivoSeleccionadoAsync" accept=".md" disabled="@_procesando" />
+    <div class="card stack">
+        <div>
+            <span class="field-label">Tipo de documento</span>
+            <div class="segmented">
+                <label class="@ClaseSegmento("tesis")">
+                    <input type="radio" name="tipo" checked="@(TipoDocumento == "tesis")"
+                           @onchange="@(() => TipoDocumento = "tesis")" disabled="@_procesando" />
+                    Mi tesis
+                </label>
+                <label class="@ClaseSegmento("corpus")">
+                    <input type="radio" name="tipo" checked="@(TipoDocumento == "corpus")"
+                           @onchange="@(() => TipoDocumento = "corpus")" disabled="@_procesando" />
+                    Libro del corpus
+                </label>
+            </div>
+            <p class="field-hint">
+                Se guarda en la colección
+                <span class="badge">@(TipoDocumento == "tesis" ? "mi-tesis" : "corpus-libros")</span>
+            </p>
+        </div>
+
+        @if (TipoDocumento == "corpus")
+        {
+            <div>
+                <label class="field-label" for="nombreLibro">Nombre del libro</label>
+                <input id="nombreLibro" class="text-input" placeholder="ej. Dunn - Beginning from Jerusalem"
+                       @bind="NombreLibro" disabled="@_procesando" />
+            </div>
+        }
+
+        <div>
+            <span class="field-label">Archivo (.md)</span>
+            <div class="file-drop">
+                <InputFile OnChange="OnArchivoSeleccionadoAsync" accept=".md" disabled="@_procesando" />
+                @if (!string.IsNullOrEmpty(_nombreArchivo))
+                {
+                    <p class="field-hint">
+                        @($"{_nombreArchivo}.md") · @_contenidoMarkdown?.Length caracteres
+                    </p>
+                }
+            </div>
+        </div>
+
+        <div>
+            <button class="btn btn-primary" @onclick="ProcesarAsync" disabled="@(_procesando || _contenidoMarkdown is null)">
+                @if (_procesando)
+                {
+                    <span class="spinner"></span>
+                    <span>Procesando (puede tardar varios minutos)...</span>
+                }
+                else
+                {
+                    <span>Procesar y guardar</span>
+                }
+            </button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(_mensaje))
+        {
+            <div class="alert @(_error ? "alert-error" : "alert-success")">@_mensaje</div>
+        }
+    </div>
 </div>
-
-@if (!string.IsNullOrEmpty(_nombreArchivo))
-{
-    <p>Archivo cargado: @($"{_nombreArchivo}.md") (@_contenidoMarkdown?.Length caracteres)</p>
-}
-
-<button @onclick="ProcesarAsync" disabled="@(_procesando || _contenidoMarkdown is null)" style="margin-top: 1rem;">
-    @(_procesando ? "Procesando (puede tardar varios minutos)..." : "Procesar y guardar")
-</button>
-
-@if (!string.IsNullOrEmpty(_mensaje))
-{
-    <p style="margin-top: 1rem;">@_mensaje</p>
-}
 
 @code {
     private string TipoDocumento { get; set; } = "tesis";
@@ -53,7 +81,15 @@
     private string? _contenidoMarkdown;
     private string? _nombreArchivo;
     private bool _procesando;
+    private bool _error;
     private string? _mensaje;
+
+    private string ClaseSegmento(string valor)
+    {
+        var clases = valor == TipoDocumento ? "selected" : "";
+        if (_procesando) clases += " disabled";
+        return clases;
+    }
 
     private async Task OnArchivoSeleccionadoAsync(InputFileChangeEventArgs e)
     {
@@ -62,6 +98,7 @@
         if (!archivo.Name.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
         {
             _mensaje = "Solo se aceptan archivos .md.";
+            _error = true;
             _contenidoMarkdown = null;
             _nombreArchivo = null;
             return;
@@ -82,6 +119,7 @@
         if (TipoDocumento == "corpus" && string.IsNullOrWhiteSpace(NombreLibro))
         {
             _mensaje = "Falta el nombre del libro.";
+            _error = true;
             return;
         }
 
@@ -107,11 +145,13 @@
             var chunksConEmbeddings = await embeddingService.GenerarEmbeddingsAsync(chunks);
             await vectorStoreSetup.GuardarChunksAsync(chunksConEmbeddings);
 
-            _mensaje = $"Listo: {chunksConEmbeddings.Count} chunks guardados en la colección \"{nombreColeccion}\".";
+            _mensaje = $"Listo: {chunksConEmbeddings.Count} chunks guardados en \"{nombreColeccion}\".";
+            _error = false;
         }
         catch (Exception ex)
         {
             _mensaje = $"Error: {ex.Message}";
+            _error = true;
         }
         finally
         {

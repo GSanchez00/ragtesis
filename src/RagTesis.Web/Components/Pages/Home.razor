@@ -1,7 +1,15 @@
-﻿@page "/"
+@page "/"
 
 <PageTitle>RagTesis</PageTitle>
 
-<h1>RagTesis</h1>
+<div class="page-container">
+    <div class="page-header">
+        <h1>RagTesis</h1>
+        <p>RAG para consultar tu tesis en lenguaje natural.</p>
+    </div>
 
-<a href="/subir">Subir documento</a>
+    <div class="card stack">
+        <a class="btn btn-primary" href="/subir" style="justify-content: center; text-decoration: none;">Subir documento</a>
+        <a class="btn" style="justify-content: center; background: var(--color-accent-soft); color: var(--color-accent-hover); text-decoration: none;" href="/consultar">Consultar</a>
+    </div>
+</div>

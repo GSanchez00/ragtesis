@@ -1,3 +1,59 @@
+.topnav {
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.topnav-inner {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--color-text) !important;
+    text-decoration: none !important;
+}
+
+.brand-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--color-accent);
+}
+
+.topnav nav {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.topnav nav ::deep a,
+.topnav nav a {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none !important;
+    padding: 0.3rem 0;
+    border-bottom: 2px solid transparent;
+}
+
+.topnav nav a:hover {
+    color: var(--color-text);
+}
+
+.topnav nav a.active {
+    color: var(--color-text);
+    border-bottom-color: var(--color-accent);
+}
+
 #blazor-error-ui {
     color-scheme: light only;
     background: lightyellow;
