@@ -10,6 +10,8 @@ applied AI engineering: designing a real RAG pipeline end to end
 (chunking → embeddings → vector search → grounded generation), not just
 calling a chat API.
 
+![Upload page](docs/screenshots/subir.png)
+
 ## What it does
 
 1. **Upload** a Markdown document through a web UI. It gets split into
