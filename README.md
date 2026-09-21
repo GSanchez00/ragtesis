@@ -23,6 +23,8 @@ calling a chat API.
    from, and explicitly saying so when the retrieved context isn't
    enough to answer.
 
+![Query page, showing a grounded answer with section citations](docs/screenshots/consultar.png)
+
 Two independent vector collections are supported (`my-thesis` and
 `reference-corpus`), so a user's own document is never mixed with
 reference material as retrieval context.
