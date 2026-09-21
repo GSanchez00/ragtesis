@@ -151,8 +151,16 @@
 
             var chatClient = ChatClientFactory.Crear(ProveedorLlm.Gemini, apiKey);
             var consultaService = new ConsultaTesisService(chatClient);
-            _respuesta = await consultaService.ResponderPreguntaAsync(Pregunta, _fragmentos);
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(90));
+            _respuesta = await consultaService.ResponderPreguntaAsync(Pregunta, _fragmentos, cts.Token);
             Console.WriteLine("[Consultar] Respuesta del LLM recibida.");
+        }
+        catch (OperationCanceledException)
+        {
+            Console.WriteLine("[Consultar] Timeout: el LLM no respondió en 90s.");
+            _mensaje = "El LLM no respondió en 90 segundos (podría ser un límite de cuota de Gemini o un problema de red). Probá de nuevo en un momento.";
+            _error = true;
         }
         catch (Exception ex)
         {
