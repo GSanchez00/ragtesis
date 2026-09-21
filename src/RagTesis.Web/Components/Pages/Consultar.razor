@@ -48,12 +48,22 @@
                     <label class="@ClaseSegmentoModelo(ProveedorLlm.Gemini)">
                         <input type="radio" name="modelo-gemini" checked="@(ModeloGemini == ProveedorLlm.Gemini)"
                                @onchange="@(() => ModeloGemini = ProveedorLlm.Gemini)" disabled="@_consultando" />
-                        Flash
+                        3.6 Flash
                     </label>
                     <label class="@ClaseSegmentoModelo(ProveedorLlm.GeminiFlashLite)">
                         <input type="radio" name="modelo-gemini" checked="@(ModeloGemini == ProveedorLlm.GeminiFlashLite)"
                                @onchange="@(() => ModeloGemini = ProveedorLlm.GeminiFlashLite)" disabled="@_consultando" />
-                        Flash Lite
+                        3.5 Flash Lite
+                    </label>
+                    <label class="@ClaseSegmentoModelo(ProveedorLlm.Gemini37Flash)">
+                        <input type="radio" name="modelo-gemini" checked="@(ModeloGemini == ProveedorLlm.Gemini37Flash)"
+                               @onchange="@(() => ModeloGemini = ProveedorLlm.Gemini37Flash)" disabled="@_consultando" />
+                        3.7 Flash
+                    </label>
+                    <label class="@ClaseSegmentoModelo(ProveedorLlm.Gemini38Flash)">
+                        <input type="radio" name="modelo-gemini" checked="@(ModeloGemini == ProveedorLlm.Gemini38Flash)"
+                               @onchange="@(() => ModeloGemini = ProveedorLlm.Gemini38Flash)" disabled="@_consultando" />
+                        3.8 Flash
                     </label>
                 </div>
             }

@@ -4,10 +4,13 @@ using RagTesis.Embeddings;
 
 // ── Config ──────────────────────────────────────────────────────────────
 var nombreColeccion = "mi-tesis";
+var flagsProveedor = new[] { "--gemini", "--gemini-lite", "--gemini-3.7", "--gemini-3.8", "--nvidia" };
 var proveedor = args.Contains("--gemini") ? ProveedorLlm.Gemini
     : args.Contains("--gemini-lite") ? ProveedorLlm.GeminiFlashLite
+    : args.Contains("--gemini-3.7") ? ProveedorLlm.Gemini37Flash
+    : args.Contains("--gemini-3.8") ? ProveedorLlm.Gemini38Flash
     : ProveedorLlm.Nvidia;
-var pregunta = string.Join(' ', args.Where(a => a != "--gemini" && a != "--gemini-lite" && a != "--nvidia"));
+var pregunta = string.Join(' ', args.Where(a => !flagsProveedor.Contains(a)));
 
 var config = new ConfigurationBuilder()
     .AddUserSecrets(Assembly.GetExecutingAssembly())
