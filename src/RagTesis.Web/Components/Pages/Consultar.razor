@@ -38,13 +38,17 @@
                 @if (_consultando)
                 {
                     <span class="spinner"></span>
-                    <span>Buscando y generando respuesta...</span>
+                    <span>Consultando...</span>
                 }
                 else
                 {
                     <span>Preguntar</span>
                 }
             </button>
+            @if (_consultando && !string.IsNullOrEmpty(_fase))
+            {
+                <p class="field-hint">@_fase</p>
+            }
         </div>
 
         @if (!string.IsNullOrEmpty(_mensaje))
@@ -89,6 +93,7 @@
     private bool _error;
     private string? _mensaje;
     private string? _respuesta;
+    private string? _fase;
     private List<(ChunkVectorRecord Chunk, double Score)> _fragmentos = new();
 
     private string ClaseSegmento(string valor)
@@ -110,11 +115,13 @@
         _mensaje = null;
         _respuesta = null;
         _fragmentos = new();
+        _fase = "Generando embedding de la pregunta...";
         StateHasChanged();
 
         try
         {
             var nombreColeccion = Coleccion == "tesis" ? "mi-tesis" : "corpus-libros";
+            Console.WriteLine($"[Consultar] Inicio. Colección: {nombreColeccion}. Pregunta: \"{Pregunta}\"");
 
             var apiKey = Configuracion["GoogleApiKey"]
                 ?? throw new InvalidOperationException("Falta configurar GoogleApiKey con dotnet user-secrets.");
@@ -124,7 +131,13 @@
             await vectorStoreSetup.InicializarAsync();
 
             var vectorPregunta = await embeddingService.GenerarEmbeddingAsync(Pregunta);
+            Console.WriteLine("[Consultar] Embedding de la pregunta generado.");
+
+            _fase = "Buscando fragmentos relevantes en Qdrant...";
+            StateHasChanged();
+
             _fragmentos = await vectorStoreSetup.BuscarAsync(vectorPregunta, top: 5);
+            Console.WriteLine($"[Consultar] {_fragmentos.Count} fragmentos recuperados de Qdrant.");
 
             if (_fragmentos.Count == 0)
             {
@@ -133,18 +146,24 @@
                 return;
             }
 
+            _fase = "Generando respuesta con el LLM...";
+            StateHasChanged();
+
             var chatClient = ChatClientFactory.Crear(ProveedorLlm.Gemini, apiKey);
             var consultaService = new ConsultaTesisService(chatClient);
             _respuesta = await consultaService.ResponderPreguntaAsync(Pregunta, _fragmentos);
+            Console.WriteLine("[Consultar] Respuesta del LLM recibida.");
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"[Consultar] Error: {ex}");
             _mensaje = $"Error: {ex.Message}";
             _error = true;
         }
         finally
         {
             _consultando = false;
+            _fase = null;
         }
     }
 }
