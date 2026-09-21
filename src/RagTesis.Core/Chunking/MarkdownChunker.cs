@@ -9,6 +9,14 @@ public class MarkdownChunker
         int maxTokens = 300)
     {
         var texto = await File.ReadAllTextAsync(rutaArchivoMd);
+        return await ChunkearMarkdownDesdeTextoAsync(texto, nombreLibro, maxTokens);
+    }
+
+    public static async Task<List<ChunkMetadata>> ChunkearMarkdownDesdeTextoAsync(
+        string textoMarkdown,
+        string nombreLibro,
+        int maxTokens = 300)
+    {
         var chunks = new List<ChunkMetadata>();
 
         var tokenizer = new MicrosoftMLTokenizerAdapter("cl100k_base");
@@ -20,7 +28,7 @@ public class MarkdownChunker
                 .WithMaxTokenSize(maxTokens))
             .Build();
 
-        await foreach (var chunk in pipeline.ChunkAsync(texto))
+        await foreach (var chunk in pipeline.ChunkAsync(textoMarkdown))
         {
             chunks.Add(new ChunkMetadata
             {
