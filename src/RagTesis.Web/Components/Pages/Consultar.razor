@@ -59,8 +59,8 @@
             }
 
             <p class="field-hint">
-                El embedding de la pregunta siempre usa Gemini. NVIDIA (Nemotron) es un modelo
-                bastante más grande y lento para generar la respuesta.
+                Modelo: <span class="badge">@ChatClientFactory.ModeloDe(Proveedor)</span>
+                — el embedding de la pregunta siempre usa Gemini.
             </p>
         </div>
 
@@ -200,7 +200,7 @@
                 return;
             }
 
-            _fase = $"Generando respuesta con {Proveedor}...";
+            _fase = $"Generando respuesta con {ChatClientFactory.ModeloDe(Proveedor)}...";
             StateHasChanged();
 
             var apiKeyProveedor = Proveedor == ProveedorLlm.Nvidia
@@ -217,8 +217,9 @@
         }
         catch (OperationCanceledException)
         {
-            Console.WriteLine($"[Consultar] Timeout: {Proveedor} no respondió a tiempo.");
-            _mensaje = $"{Proveedor} no respondió a tiempo. Podría ser un límite de cuota o un problema de red. Probá de nuevo en un momento.";
+            var modelo = ChatClientFactory.ModeloDe(Proveedor);
+            Console.WriteLine($"[Consultar] Timeout: {modelo} no respondió a tiempo.");
+            _mensaje = $"{modelo} no respondió a tiempo. Podría ser un límite de cuota o un problema de red. Probá de nuevo en un momento.";
             _error = true;
         }
         catch (Exception ex)
