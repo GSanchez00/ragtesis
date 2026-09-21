@@ -1,1 +1,1 @@
-public enum ProveedorLlm { Gemini, Nvidia }
+public enum ProveedorLlm { Gemini, GeminiFlashLite, Nvidia }

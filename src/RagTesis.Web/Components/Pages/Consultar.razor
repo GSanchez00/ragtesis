@@ -35,6 +35,11 @@
                            @onchange="@(() => Proveedor = ProveedorLlm.Gemini)" disabled="@_consultando" />
                     Gemini
                 </label>
+                <label class="@ClaseSegmentoProveedor(ProveedorLlm.GeminiFlashLite)">
+                    <input type="radio" name="proveedor" checked="@(Proveedor == ProveedorLlm.GeminiFlashLite)"
+                           @onchange="@(() => Proveedor = ProveedorLlm.GeminiFlashLite)" disabled="@_consultando" />
+                    Gemini Flash Lite
+                </label>
                 <label class="@ClaseSegmentoProveedor(ProveedorLlm.Nvidia)">
                     <input type="radio" name="proveedor" checked="@(Proveedor == ProveedorLlm.Nvidia)"
                            @onchange="@(() => Proveedor = ProveedorLlm.Nvidia)" disabled="@_consultando" />
@@ -177,9 +182,9 @@
             _fase = $"Generando respuesta con {Proveedor}...";
             StateHasChanged();
 
-            var apiKeyProveedor = Proveedor == ProveedorLlm.Gemini
-                ? apiKey
-                : Configuracion["NvidiaApiKey"] ?? throw new InvalidOperationException("Falta configurar NvidiaApiKey con dotnet user-secrets.");
+            var apiKeyProveedor = Proveedor == ProveedorLlm.Nvidia
+                ? Configuracion["NvidiaApiKey"] ?? throw new InvalidOperationException("Falta configurar NvidiaApiKey con dotnet user-secrets.")
+                : apiKey;
 
             var chatClient = ChatClientFactory.Crear(Proveedor, apiKeyProveedor);
             var consultaService = new ConsultaTesisService(chatClient);

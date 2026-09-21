@@ -4,8 +4,10 @@ using RagTesis.Embeddings;
 
 // ── Config ──────────────────────────────────────────────────────────────
 var nombreColeccion = "mi-tesis";
-var proveedor = args.Contains("--gemini") ? ProveedorLlm.Gemini : ProveedorLlm.Nvidia;
-var pregunta = string.Join(' ', args.Where(a => a != "--gemini" && a != "--nvidia"));
+var proveedor = args.Contains("--gemini") ? ProveedorLlm.Gemini
+    : args.Contains("--gemini-lite") ? ProveedorLlm.GeminiFlashLite
+    : ProveedorLlm.Nvidia;
+var pregunta = string.Join(' ', args.Where(a => a != "--gemini" && a != "--gemini-lite" && a != "--nvidia"));
 
 var config = new ConfigurationBuilder()
     .AddUserSecrets(Assembly.GetExecutingAssembly())
@@ -53,7 +55,7 @@ foreach (var (chunk, score) in resultadosBusqueda)
 }
 
 // ── Respuesta del LLM ──────────────────────────────────────────────────
-var apiKeyProveedor = proveedor == ProveedorLlm.Gemini ? googleApiKey : nvidiaApiKey;
+var apiKeyProveedor = proveedor == ProveedorLlm.Nvidia ? nvidiaApiKey : googleApiKey;
 var chatClient = ChatClientFactory.Crear(proveedor, apiKeyProveedor);
 var consultaService = new ConsultaTesisService(chatClient);
 

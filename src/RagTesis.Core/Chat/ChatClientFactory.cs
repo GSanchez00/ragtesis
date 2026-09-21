@@ -12,6 +12,8 @@ public static class ChatClientFactory
         {
             ProveedorLlm.Gemini => new GeminiChatClient(apiKey, "gemini-3.6-flash", (ILogger?)null),
 
+            ProveedorLlm.GeminiFlashLite => new GeminiChatClient(apiKey, "gemini-3.5-flash-lite", (ILogger?)null),
+
             ProveedorLlm.Nvidia => new OpenAIClient(
                     new ApiKeyCredential(apiKey),
                     new OpenAIClientOptions { Endpoint = new Uri("https://integrate.api.nvidia.com/v1") })
