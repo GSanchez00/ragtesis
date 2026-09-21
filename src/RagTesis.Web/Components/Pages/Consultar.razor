@@ -28,6 +28,26 @@
         </div>
 
         <div>
+            <span class="field-label">Proveedor</span>
+            <div class="segmented">
+                <label class="@ClaseSegmentoProveedor(ProveedorLlm.Gemini)">
+                    <input type="radio" name="proveedor" checked="@(Proveedor == ProveedorLlm.Gemini)"
+                           @onchange="@(() => Proveedor = ProveedorLlm.Gemini)" disabled="@_consultando" />
+                    Gemini
+                </label>
+                <label class="@ClaseSegmentoProveedor(ProveedorLlm.Nvidia)">
+                    <input type="radio" name="proveedor" checked="@(Proveedor == ProveedorLlm.Nvidia)"
+                           @onchange="@(() => Proveedor = ProveedorLlm.Nvidia)" disabled="@_consultando" />
+                    NVIDIA
+                </label>
+            </div>
+            <p class="field-hint">
+                El embedding de la pregunta siempre usa Gemini. NVIDIA (Nemotron) es un modelo
+                bastante más grande y lento para generar la respuesta.
+            </p>
+        </div>
+
+        <div>
             <label class="field-label" for="pregunta">Pregunta</label>
             <textarea id="pregunta" class="text-input" placeholder="ej. ¿Por qué Pedro dudaba en comer con gentiles?"
                       @bind="Pregunta" disabled="@_consultando"></textarea>
@@ -88,6 +108,7 @@
 @code {
     private string Coleccion { get; set; } = "tesis";
     private string Pregunta { get; set; } = "";
+    private ProveedorLlm Proveedor { get; set; } = ProveedorLlm.Gemini;
 
     private bool _consultando;
     private bool _error;
@@ -99,6 +120,13 @@
     private string ClaseSegmento(string valor)
     {
         var clases = valor == Coleccion ? "selected" : "";
+        if (_consultando) clases += " disabled";
+        return clases;
+    }
+
+    private string ClaseSegmentoProveedor(ProveedorLlm valor)
+    {
+        var clases = valor == Proveedor ? "selected" : "";
         if (_consultando) clases += " disabled";
         return clases;
     }
@@ -146,20 +174,25 @@
                 return;
             }
 
-            _fase = "Generando respuesta con el LLM...";
+            _fase = $"Generando respuesta con {Proveedor}...";
             StateHasChanged();
 
-            var chatClient = ChatClientFactory.Crear(ProveedorLlm.Gemini, apiKey);
+            var apiKeyProveedor = Proveedor == ProveedorLlm.Gemini
+                ? apiKey
+                : Configuracion["NvidiaApiKey"] ?? throw new InvalidOperationException("Falta configurar NvidiaApiKey con dotnet user-secrets.");
+
+            var chatClient = ChatClientFactory.Crear(Proveedor, apiKeyProveedor);
             var consultaService = new ConsultaTesisService(chatClient);
 
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(90));
+            var timeoutSegundos = Proveedor == ProveedorLlm.Nvidia ? 180 : 90;
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSegundos));
             _respuesta = await consultaService.ResponderPreguntaAsync(Pregunta, _fragmentos, cts.Token);
             Console.WriteLine("[Consultar] Respuesta del LLM recibida.");
         }
         catch (OperationCanceledException)
         {
-            Console.WriteLine("[Consultar] Timeout: el LLM no respondió en 90s.");
-            _mensaje = "El LLM no respondió en 90 segundos (podría ser un límite de cuota de Gemini o un problema de red). Probá de nuevo en un momento.";
+            Console.WriteLine($"[Consultar] Timeout: {Proveedor} no respondió a tiempo.");
+            _mensaje = $"{Proveedor} no respondió a tiempo. Podría ser un límite de cuota o un problema de red. Probá de nuevo en un momento.";
             _error = true;
         }
         catch (Exception ex)
