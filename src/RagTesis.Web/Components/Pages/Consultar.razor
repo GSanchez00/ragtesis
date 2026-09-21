@@ -1,5 +1,6 @@
 @page "/consultar"
 @using RagTesis.Embeddings
+@using Markdig
 @inject IConfiguration Configuracion
 
 <PageTitle>Consultar</PageTitle>
@@ -108,7 +109,7 @@
     {
         <div class="card">
             <span class="field-label">Respuesta</span>
-            <div class="respuesta">@_respuesta</div>
+            <div class="respuesta">@((MarkupString)Markdown.ToHtml(_respuesta))</div>
         </div>
     }
 
