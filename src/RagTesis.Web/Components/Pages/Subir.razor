@@ -58,13 +58,17 @@
                 @if (_procesando)
                 {
                     <span class="spinner"></span>
-                    <span>Procesando (puede tardar varios minutos)...</span>
+                    <span>Procesando...</span>
                 }
                 else
                 {
                     <span>Procesar y guardar</span>
                 }
             </button>
+            @if (_procesando && !string.IsNullOrEmpty(_fase))
+            {
+                <p class="field-hint">@_fase</p>
+            }
         </div>
 
         @if (!string.IsNullOrEmpty(_mensaje))
@@ -83,6 +87,7 @@
     private bool _procesando;
     private bool _error;
     private string? _mensaje;
+    private string? _fase;
 
     private string ClaseSegmento(string valor)
     {
@@ -125,6 +130,7 @@
 
         _procesando = true;
         _mensaje = null;
+        _fase = "Chunkeando documento...";
         StateHasChanged();
 
         try
@@ -133,6 +139,10 @@
             var nombreDocumento = TipoDocumento == "tesis" ? _nombreArchivo : NombreLibro;
 
             var chunks = await MarkdownChunker.ChunkearMarkdownDesdeTextoAsync(_contenidoMarkdown, nombreDocumento);
+
+            var rutaChunks = Path.Combine("..", "..", "output", "chunks", $"{SanitizarNombreArchivo(_nombreArchivo)}.chunks.json");
+            MarkdownChunker.GuardarChunks(chunks, rutaChunks);
+
             chunks = chunks.Where(c => !string.IsNullOrWhiteSpace(c.Seccion)).ToList();
 
             var apiKey = Configuracion["GoogleApiKey"]
@@ -142,10 +152,26 @@
             var vectorStoreSetup = new VectorStoreSetup(nombreColeccion);
             await vectorStoreSetup.InicializarAsync();
 
-            var chunksConEmbeddings = await embeddingService.GenerarEmbeddingsAsync(chunks);
+            _fase = $"Generando embeddings: chunk 0 de {chunks.Count}...";
+            StateHasChanged();
+
+            var progreso = new Progress<(int Actual, int Total)>(p =>
+            {
+                _fase = $"Generando embeddings: chunk {p.Actual} de {p.Total}...";
+                if (p.Actual % 10 == 0 || p.Actual == p.Total)
+                {
+                    StateHasChanged();
+                }
+            });
+
+            var chunksConEmbeddings = await embeddingService.GenerarEmbeddingsAsync(chunks, progreso: progreso);
+
+            _fase = "Guardando en Qdrant...";
+            StateHasChanged();
+
             await vectorStoreSetup.GuardarChunksAsync(chunksConEmbeddings);
 
-            _mensaje = $"Listo: {chunksConEmbeddings.Count} chunks guardados en \"{nombreColeccion}\".";
+            _mensaje = $"Listo: {chunksConEmbeddings.Count} chunks guardados en \"{nombreColeccion}\". Copia local en {rutaChunks}.";
             _error = false;
         }
         catch (Exception ex)
@@ -156,6 +182,14 @@
         finally
         {
             _procesando = false;
+            _fase = null;
         }
+    }
+
+    private static string SanitizarNombreArchivo(string nombre)
+    {
+        foreach (var c in Path.GetInvalidFileNameChars())
+            nombre = nombre.Replace(c, '_');
+        return nombre;
     }
 }

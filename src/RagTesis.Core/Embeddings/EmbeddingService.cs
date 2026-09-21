@@ -22,7 +22,8 @@ public class EmbeddingService
     // Para procesar muchos chunks respetando el rate limit gratuito de Gemini
     public async Task<List<(ChunkMetadata Chunk, float[] Vector)>> GenerarEmbeddingsAsync(
         List<ChunkMetadata> chunks,
-        int delayMs = 4000) // ~15 requests/minuto, con margen
+        int delayMs = 4000, // ~15 requests/minuto, con margen
+        IProgress<(int Actual, int Total)>? progreso = null)
     {
         var resultados = new List<(ChunkMetadata, float[])>();
 
@@ -31,6 +32,7 @@ public class EmbeddingService
             var vector = await GenerarEmbeddingAsync(chunk.Texto);
             resultados.Add((chunk, vector));
             Console.WriteLine($"Embedding generado: chunk #{chunk.NumeroChunk} ({resultados.Count}/{chunks.Count})");
+            progreso?.Report((resultados.Count, chunks.Count));
             await Task.Delay(delayMs);
         }
 
