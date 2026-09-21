@@ -18,6 +18,25 @@
             "stopAtEntry": false
         },
         {
+            "name": "RagTesis.Web",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-web",
+            "program": "${workspaceFolder}/src/RagTesis.Web/bin/Debug/net9.0/RagTesis.Web.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/RagTesis.Web",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "DOTNET_USE_POLLING_FILE_WATCHER": "1"
+            },
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+            }
+        },
+        {
             "name": ".NET Core Attach",
             "type": "coreclr",
             "request": "attach"
