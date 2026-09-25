@@ -4,3 +4,4 @@ obj/
 *.user
 vectorstore-data/
 *Zone.Identifier*
+.claude/settings.local.json
